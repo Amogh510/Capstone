@@ -13,6 +13,11 @@ const { resolveAlias } = require('./aliasResolver');
 function buildFdg(files, kgNodesByFile) {
   const nodes = [];
   const edges = [];
+  
+  // Create a set of valid file paths for quick lookup
+  const validFilePaths = new Set(files.map(file => normalizePath(file)));
+  
+  console.log('Valid file paths:', Array.from(validFilePaths).slice(0, 5)); // Show first 5 for debugging
 
   files.forEach((filePath) => {
     const fileId = normalizePath(filePath);
@@ -22,7 +27,6 @@ function buildFdg(files, kgNodesByFile) {
     const imports = [];
     const exports = [];
     const stylesImported = [];
-    const kgNodeRefs = {};
 
     if (!isStyle) {
       const ast = require('./astParser').parseFile(filePath);
@@ -34,15 +38,24 @@ function buildFdg(files, kgNodesByFile) {
               importPath,
               path.dirname(filePath)
             );
-            if (/\.(css|scss|sass)$/.test(resolvedPath)) {
-              stylesImported.push(resolvedPath);
+            
+            console.log(`Import in ${fileId}: ${importPath} -> ${resolvedPath} (valid: ${validFilePaths.has(resolvedPath)})`);
+            
+            // Only include imports that reference actual files in the codebase
+            if (validFilePaths.has(resolvedPath)) {
+              if (/\.(css|scss|sass)$/.test(resolvedPath)) {
+                stylesImported.push(resolvedPath);
+              } else {
+                imports.push(resolvedPath);
+                edges.push({
+                  from: fileId,
+                  to: resolvedPath,
+                  type: 'staticImport',
+                });
+                console.log(`  ✓ Added edge: ${fileId} -> ${resolvedPath}`);
+              }
             } else {
-              imports.push(resolvedPath);
-              edges.push({
-                from: fileId,
-                to: resolvedPath,
-                type: 'staticImport',
-              });
+              console.log(`  ✗ Skipped external import: ${resolvedPath}`);
             }
           },
           ExportNamedDeclaration(babelPath) {
@@ -58,11 +71,19 @@ function buildFdg(files, kgNodesByFile) {
     }
 
     const fileKgNodes = kgNodesByFile.get(fileId) || [];
+    
+    // Use Sets to avoid duplicates in kgNodeRefs
+    const kgNodeRefs = {};
     fileKgNodes.forEach((node) => {
       if (!kgNodeRefs[node.type]) {
-        kgNodeRefs[node.type] = [];
+        kgNodeRefs[node.type] = new Set();
       }
-      kgNodeRefs[node.type].push(node.id);
+      kgNodeRefs[node.type].add(node.id);
+    });
+    
+    // Convert Sets back to arrays
+    Object.keys(kgNodeRefs).forEach(type => {
+      kgNodeRefs[type] = Array.from(kgNodeRefs[type]);
     });
 
     nodes.push({
@@ -78,6 +99,7 @@ function buildFdg(files, kgNodesByFile) {
     });
   });
 
+  console.log(`FDG built: ${nodes.length} nodes, ${edges.length} edges`);
   return { nodes, edges };
 }
 

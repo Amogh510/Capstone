@@ -19,14 +19,16 @@ function extractProps({ ast, componentName, filePath }) {
           const propsParam = componentNode.params[0];
           if (propsParam.type === 'ObjectPattern') {
             propsParam.properties.forEach((prop) => {
-              props.push({
-                id: createKgNodeId('Prop', prop.key.name, componentName),
-                type: 'Prop',
-                name: prop.key.name,
-                passedToComponent: componentName,
-                passedFromFile: filePath,
-                valueType: 'unknown', // This is hard to determine statically
-              });
+              if (prop && prop.key && prop.key.name) {
+                props.push({
+                  id: createKgNodeId('Prop', prop.key.name, componentName),
+                  type: 'Prop',
+                  name: prop.key.name,
+                  passedToComponent: componentName,
+                  passedFromFile: filePath,
+                  valueType: 'unknown', // This is hard to determine statically
+                });
+              }
             });
           }
         }
@@ -45,21 +47,23 @@ function extractProps({ ast, componentName, filePath }) {
           const propsParam = componentNode.params[0];
           if (propsParam.type === 'ObjectPattern') {
             propsParam.properties.forEach((prop) => {
-              props.push({
-                id: createKgNodeId('Prop', prop.key.name, componentName),
-                type: 'Prop',
-                name: prop.key.name,
-                passedToComponent: componentName,
-                passedFromFile: filePath,
-                valueType: 'unknown',
-              });
+              if (prop && prop.key && prop.key.name) {
+                props.push({
+                  id: createKgNodeId('Prop', prop.key.name, componentName),
+                  type: 'Prop',
+                  name: prop.key.name,
+                  passedToComponent: componentName,
+                  passedFromFile: filePath,
+                  valueType: 'unknown',
+                });
+              }
             });
           }
         }
       }
     },
     MemberExpression(path) {
-        if (path.node.object.name === 'props') {
+        if (path.node.object && path.node.object.name === 'props' && path.node.property && path.node.property.name) {
             const propName = path.node.property.name;
             props.push({
                 id: createKgNodeId('Prop', propName, componentName),

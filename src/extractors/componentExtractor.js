@@ -10,6 +10,7 @@ const { createKgNodeId } = require('../utils/idUtils');
  */
 function extractComponents({ ast, filePath }) {
   const components = [];
+  const componentNames = new Set(); // Track component names to avoid duplicates
 
   traverse(ast, {
     ExportNamedDeclaration(path) {
@@ -17,30 +18,36 @@ function extractComponents({ ast, filePath }) {
       if (declaration) {
         if (isComponent(declaration)) {
           const componentName = declaration.id ? declaration.id.name : 'unnamed';
-          components.push({
-            id: createKgNodeId('Component', componentName),
-            type: 'Component',
-            name: componentName,
-            filePath,
-            exportType: 'named',
-            props: [],
-            hooksUsed: [],
-            contextUsed: [],
-          });
+          if (!componentNames.has(componentName)) {
+            componentNames.add(componentName);
+            components.push({
+              id: createKgNodeId('Component', componentName),
+              type: 'Component',
+              name: componentName,
+              filePath,
+              exportType: 'named',
+              props: [],
+              hooksUsed: [],
+              contextUsed: [],
+            });
+          }
         } else if (declaration.type === 'VariableDeclaration') {
           declaration.declarations.forEach((declarator) => {
             if (isComponent(declarator.init)) {
               const componentName = declarator.id.name;
-              components.push({
-                id: createKgNodeId('Component', componentName),
-                type: 'Component',
-                name: componentName,
-                filePath,
-                exportType: 'named',
-                props: [],
-                hooksUsed: [],
-                contextUsed: [],
-              });
+              if (!componentNames.has(componentName)) {
+                componentNames.add(componentName);
+                components.push({
+                  id: createKgNodeId('Component', componentName),
+                  type: 'Component',
+                  name: componentName,
+                  filePath,
+                  exportType: 'named',
+                  props: [],
+                  hooksUsed: [],
+                  contextUsed: [],
+                });
+              }
             }
           });
         }
@@ -50,67 +57,51 @@ function extractComponents({ ast, filePath }) {
       const { declaration } = path.node;
       if (isComponent(declaration)) {
         const componentName = declaration.id ? declaration.id.name : 'default';
-        components.push({
-          id: createKgNodeId('Component', componentName),
-          type: 'Component',
-          name: componentName,
-          filePath,
-          exportType: 'default',
-          props: [],
-          hooksUsed: [],
-          contextUsed: [],
-        });
+        if (!componentNames.has(componentName)) {
+          componentNames.add(componentName);
+          components.push({
+            id: createKgNodeId('Component', componentName),
+            type: 'Component',
+            name: componentName,
+            filePath,
+            exportType: 'default',
+            props: [],
+            hooksUsed: [],
+            contextUsed: [],
+          });
+        }
       } else if (declaration.type === 'Identifier') {
         // Find the declaration of the identifier
         const binding = path.scope.getBinding(declaration.name);
         if (binding && isComponent(binding.path.node)) {
             const componentName = declaration.name;
-            components.push({
-                id: createKgNodeId('Component', componentName),
-                type: 'Component',
-                name: componentName,
-                filePath,
-                exportType: 'default',
-                props: [],
-                hooksUsed: [],
-                contextUsed: [],
-            });
+            if (!componentNames.has(componentName)) {
+              componentNames.add(componentName);
+              components.push({
+                  id: createKgNodeId('Component', componentName),
+                  type: 'Component',
+                  name: componentName,
+                  filePath,
+                  exportType: 'default',
+                  props: [],
+                  hooksUsed: [],
+                  contextUsed: [],
+              });
+            }
         }
       } else if (declaration.type === 'VariableDeclaration') {
         // Handle default export of variable declaration
         declaration.declarations.forEach((declarator) => {
           if (isComponent(declarator.init)) {
             const componentName = declarator.id.name;
-            components.push({
-              id: createKgNodeId('Component', componentName),
-              type: 'Component',
-              name: componentName,
-              filePath,
-              exportType: 'default',
-              props: [],
-              hooksUsed: [],
-              contextUsed: [],
-            });
-          }
-        });
-      }
-    },
-    VariableDeclaration(path) {
-      // Also check for components that might not be exported
-      if (path.node.kind === 'const' || path.node.kind === 'let') {
-        path.node.declarations.forEach((declarator) => {
-          if (isComponent(declarator.init)) {
-            const componentName = declarator.id.name;
-            // Check if this component is already exported
-            const isExported = path.parent.type === 'ExportDefaultDeclaration' || 
-                              path.parent.type === 'ExportNamedDeclaration';
-            if (!isExported) {
+            if (!componentNames.has(componentName)) {
+              componentNames.add(componentName);
               components.push({
                 id: createKgNodeId('Component', componentName),
                 type: 'Component',
                 name: componentName,
                 filePath,
-                exportType: 'none',
+                exportType: 'default',
                 props: [],
                 hooksUsed: [],
                 contextUsed: [],

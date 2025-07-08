@@ -35,24 +35,60 @@ async function main() {
     }
     fileNodes.push(...components);
 
+    // Extract all related data for each component
     components.forEach((component) => {
       const componentName = component.name;
-      fileNodes.push(...extractStates({ ast, componentName }));
-      fileNodes.push(...extractProps({ ast, componentName, filePath: normalizedPath }));
-      fileNodes.push(...extractHooks({ ast, componentName }));
-      fileNodes.push(...extractEventHandlers({ ast, componentName }));
-      fileNodes.push(...extractJsxElements({ ast, componentName }));
+      
+      // Extract states, props, hooks, event handlers, and JSX elements
+      const states = extractStates({ ast, componentName });
+      const props = extractProps({ ast, componentName, filePath: normalizedPath });
+      const hooks = extractHooks({ ast, componentName });
+      const eventHandlers = extractEventHandlers({ ast, componentName });
+      const jsxElements = extractJsxElements({ ast, componentName });
+      
+      // Add all extracted data to file nodes
+      fileNodes.push(...states, ...props, ...hooks, ...eventHandlers, ...jsxElements);
+      
+      // Update the component node with its related data using IDs
+      component.props = props.map(prop => prop.id);
+      component.hooksUsed = hooks.map(hook => hook.id);
+      // Note: contextUsed will be updated later when we extract contexts
     });
 
-    fileNodes.push(...extractContexts({ ast, filePath: normalizedPath }));
+    // Extract contexts and routes
+    const contexts = extractContexts({ ast, filePath: normalizedPath });
     const { routes, declareRoutes } = extractRoutes({ ast, filePath: normalizedPath });
-    fileNodes.push(...routes);
+    fileNodes.push(...contexts, ...routes);
+
+    // Update component nodes with context information using IDs
+    components.forEach((component) => {
+      const componentName = component.name;
+      const componentContexts = contexts.filter(context => 
+        context.componentName === componentName
+      );
+      component.contextUsed = componentContexts.map(context => context.id);
+    });
 
     kgNodesByFile.set(normalizedPath, fileNodes);
   }
 
   const fdg = buildFdg(files, kgNodesByFile);
-  const kg = buildKg(kgNodesByFile);
+  let kg = buildKg(kgNodesByFile);
+
+  // Deduplicate props, hooksUsed, and contextUsed for each component node
+  kg.nodes.forEach(node => {
+    if (node.type === 'Component') {
+      if (Array.isArray(node.props)) {
+        node.props = Array.from(new Set(node.props));
+      }
+      if (Array.isArray(node.hooksUsed)) {
+        node.hooksUsed = Array.from(new Set(node.hooksUsed));
+      }
+      if (Array.isArray(node.contextUsed)) {
+        node.contextUsed = Array.from(new Set(node.contextUsed));
+      }
+    }
+  });
 
   // Update declareRoutes in FDG
   fdg.nodes.forEach((node) => {
