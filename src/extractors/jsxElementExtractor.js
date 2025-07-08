@@ -13,13 +13,23 @@ function extractJsxElements({ ast, componentName }) {
 
   traverse(ast, {
     JSXOpeningElement(path) {
+      if (!path.node.name || !path.node.name.name) {
+        return; // Skip elements without valid names
+      }
       const tagName = path.node.name.name;
       if (jsxTagAllowList.includes(tagName)) {
         const attributes = {};
         let elementId = null;
 
-        path.get('attributes').forEach((attributePath) => {
+        const attributesPath = path.get('attributes');
+        if (!attributesPath || !Array.isArray(attributesPath)) {
+          return;
+        }
+        attributesPath.forEach((attributePath) => {
           const attribute = attributePath.node;
+          if (!attribute || !attribute.name || !attribute.name.name) {
+            return; // Skip attributes without valid names
+          }
           const attrName = attribute.name.name;
           const attrValue = attribute.value;
 

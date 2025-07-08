@@ -39,12 +39,38 @@ function buildFdg(files, kgNodesByFile) {
               path.dirname(filePath)
             );
             
-            console.log(`Import in ${fileId}: ${importPath} -> ${resolvedPath} (valid: ${validFilePaths.has(resolvedPath)})`);
+            // Determine import type for better logging
+            const specifiers = babelPath.node.specifiers || [];
+            let importType = 'unknown';
+            let importedItems = [];
+            
+            specifiers.forEach(specifier => {
+              if (specifier.type === 'ImportDefaultSpecifier') {
+                importType = 'default';
+                importedItems.push(specifier.local.name);
+              } else if (specifier.type === 'ImportSpecifier') {
+                importType = 'named';
+                const importedName = specifier.imported ? specifier.imported.name : specifier.local.name;
+                importedItems.push(importedName);
+              } else if (specifier.type === 'ImportNamespaceSpecifier') {
+                importType = 'namespace';
+                importedItems.push(specifier.local.name);
+              }
+            });
+            
+            console.log(`Import in ${fileId}: ${importPath} -> ${resolvedPath} (${importType}: ${importedItems.join(', ')}) (valid: ${validFilePaths.has(resolvedPath)})`);
             
             // Only include imports that reference actual files in the codebase
             if (validFilePaths.has(resolvedPath)) {
               if (/\.(css|scss|sass)$/.test(resolvedPath)) {
                 stylesImported.push(resolvedPath);
+                // Add edge for CSS imports
+                edges.push({
+                  from: fileId,
+                  to: resolvedPath,
+                  type: 'styleImport',
+                });
+                console.log(`  ✓ Added style edge: ${fileId} -> ${resolvedPath}`);
               } else {
                 imports.push(resolvedPath);
                 edges.push({
@@ -58,13 +84,92 @@ function buildFdg(files, kgNodesByFile) {
               console.log(`  ✗ Skipped external import: ${resolvedPath}`);
             }
           },
+          CallExpression(babelPath) {
+            // Handle dynamic imports: import('./module')
+            if (babelPath.node.callee.type === 'Import') {
+              const importArg = babelPath.node.arguments[0];
+              if (importArg && importArg.type === 'StringLiteral') {
+                const importPath = importArg.value;
+                const resolvedPath = resolveAlias(
+                  importPath,
+                  path.dirname(filePath)
+                );
+                
+                console.log(`Dynamic import in ${fileId}: ${importPath} -> ${resolvedPath} (valid: ${validFilePaths.has(resolvedPath)})`);
+                
+                if (validFilePaths.has(resolvedPath)) {
+                  if (/\.(css|scss|sass)$/.test(resolvedPath)) {
+                    stylesImported.push(resolvedPath);
+                    edges.push({
+                      from: fileId,
+                      to: resolvedPath,
+                      type: 'dynamicStyleImport',
+                    });
+                    console.log(`  ✓ Added dynamic style edge: ${fileId} -> ${resolvedPath}`);
+                  } else {
+                    imports.push(resolvedPath);
+                    edges.push({
+                      from: fileId,
+                      to: resolvedPath,
+                      type: 'dynamicImport',
+                    });
+                    console.log(`  ✓ Added dynamic edge: ${fileId} -> ${resolvedPath}`);
+                  }
+                } else {
+                  console.log(`  ✗ Skipped external dynamic import: ${resolvedPath}`);
+                }
+              }
+            }
+          },
           ExportNamedDeclaration(babelPath) {
-            if (babelPath.node.declaration && babelPath.node.declaration.id) {
-              exports.push(babelPath.node.declaration.id.name);
+            const { declaration, specifiers } = babelPath.node;
+            
+            // Handle named exports with declarations
+            if (declaration) {
+              if (declaration.id) {
+                exports.push(declaration.id.name);
+              } else if (declaration.type === 'VariableDeclaration') {
+                declaration.declarations.forEach(declarator => {
+                  if (declarator.id && declarator.id.name) {
+                    exports.push(declarator.id.name);
+                  }
+                });
+              }
+            }
+            
+            // Handle re-exports (export { x, y } from 'module')
+            if (specifiers && specifiers.length > 0) {
+              specifiers.forEach(specifier => {
+                if (specifier.exported && specifier.exported.name) {
+                  exports.push(specifier.exported.name);
+                }
+              });
             }
           },
           ExportDefaultDeclaration(babelPath) {
-            exports.push('default');
+            const { declaration } = babelPath.node;
+            
+            if (declaration) {
+              if (declaration.id && declaration.id.name) {
+                exports.push(declaration.id.name);
+              } else if (declaration.type === 'Identifier') {
+                exports.push(declaration.name);
+              } else if (declaration.type === 'VariableDeclaration') {
+                declaration.declarations.forEach(declarator => {
+                  if (declarator.id && declarator.id.name) {
+                    exports.push(declarator.id.name);
+                  }
+                });
+              } else {
+                exports.push('default');
+              }
+            } else {
+              exports.push('default');
+            }
+          },
+          ExportAllDeclaration(babelPath) {
+            // Handle export * from 'module'
+            exports.push('*');
           },
         });
       }

@@ -13,11 +13,11 @@ function extractProps({ ast, componentName, filePath }) {
 
   traverse(ast, {
     FunctionDeclaration(path) {
-      if (path.node.id.name === componentName) {
+      if (path.node.id && path.node.id.name === componentName) {
         const componentNode = path.node;
         if (componentNode.params.length > 0) {
           const propsParam = componentNode.params[0];
-          if (propsParam.type === 'ObjectPattern') {
+          if (propsParam.type === 'ObjectPattern' && Array.isArray(propsParam.properties)) {
             propsParam.properties.forEach((prop) => {
               if (prop && prop.key && prop.key.name) {
                 props.push({
@@ -40,12 +40,13 @@ function extractProps({ ast, componentName, filePath }) {
       );
       if (
         variableDeclarator &&
+        variableDeclarator.node.id &&
         variableDeclarator.node.id.name === componentName
       ) {
         const componentNode = path.node;
         if (componentNode.params.length > 0) {
           const propsParam = componentNode.params[0];
-          if (propsParam.type === 'ObjectPattern') {
+          if (propsParam.type === 'ObjectPattern' && Array.isArray(propsParam.properties)) {
             propsParam.properties.forEach((prop) => {
               if (prop && prop.key && prop.key.name) {
                 props.push({

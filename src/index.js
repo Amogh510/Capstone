@@ -23,51 +23,59 @@ async function main() {
 
   for (const filePath of files) {
     const normalizedPath = normalizePath(filePath);
+    const fileType = path.extname(filePath).substring(1);
+    const isStyle = ['css', 'scss', 'sass'].includes(fileType);
+    
     const ast = parseFile(filePath);
-    if (!ast) continue;
-
     const fileNodes = [];
 
-    const components = extractComponents({ ast, filePath: normalizedPath });
-    console.log(`File: ${normalizedPath} - Components found: ${components.length}`);
-    if (components.length > 0) {
-      components.forEach(comp => console.log(`  - ${comp.name} (${comp.exportType})`));
+    // For style files, we don't have AST but we still want to include them in the graph
+    if (!ast && !isStyle) continue;
+
+    if (ast) {
+      const components = extractComponents({ ast, filePath: normalizedPath });
+      console.log(`File: ${normalizedPath} - Components found: ${components.length}`);
+      if (components.length > 0) {
+        components.forEach(comp => console.log(`  - ${comp.name} (${comp.exportType})`));
+      }
+      fileNodes.push(...components);
+
+      // Extract all related data for each component
+      components.forEach((component) => {
+        const componentName = component.name;
+        
+        // Extract states, props, hooks, event handlers, and JSX elements
+        const states = extractStates({ ast, componentName });
+        const props = extractProps({ ast, componentName, filePath: normalizedPath });
+        const hooks = extractHooks({ ast, componentName });
+        const eventHandlers = extractEventHandlers({ ast, componentName });
+        const jsxElements = extractJsxElements({ ast, componentName });
+        
+        // Add all extracted data to file nodes
+        fileNodes.push(...states, ...props, ...hooks, ...eventHandlers, ...jsxElements);
+        
+        // Update the component node with its related data using IDs
+        component.props = props.map(prop => prop.id);
+        component.hooksUsed = hooks.map(hook => hook.id);
+        // Note: contextUsed will be updated later when we extract contexts
+      });
+
+      // Extract contexts and routes
+      const contexts = extractContexts({ ast, filePath: normalizedPath });
+      const { routes, declareRoutes } = extractRoutes({ ast, filePath: normalizedPath });
+      fileNodes.push(...contexts, ...routes);
+
+      // Update component nodes with context information using IDs
+      components.forEach((component) => {
+        const componentName = component.name;
+        const componentContexts = contexts.filter(context => 
+          context.componentName === componentName
+        );
+        component.contextUsed = componentContexts.map(context => context.id);
+      });
+    } else if (isStyle) {
+      console.log(`File: ${normalizedPath} - Style file (no AST analysis)`);
     }
-    fileNodes.push(...components);
-
-    // Extract all related data for each component
-    components.forEach((component) => {
-      const componentName = component.name;
-      
-      // Extract states, props, hooks, event handlers, and JSX elements
-      const states = extractStates({ ast, componentName });
-      const props = extractProps({ ast, componentName, filePath: normalizedPath });
-      const hooks = extractHooks({ ast, componentName });
-      const eventHandlers = extractEventHandlers({ ast, componentName });
-      const jsxElements = extractJsxElements({ ast, componentName });
-      
-      // Add all extracted data to file nodes
-      fileNodes.push(...states, ...props, ...hooks, ...eventHandlers, ...jsxElements);
-      
-      // Update the component node with its related data using IDs
-      component.props = props.map(prop => prop.id);
-      component.hooksUsed = hooks.map(hook => hook.id);
-      // Note: contextUsed will be updated later when we extract contexts
-    });
-
-    // Extract contexts and routes
-    const contexts = extractContexts({ ast, filePath: normalizedPath });
-    const { routes, declareRoutes } = extractRoutes({ ast, filePath: normalizedPath });
-    fileNodes.push(...contexts, ...routes);
-
-    // Update component nodes with context information using IDs
-    components.forEach((component) => {
-      const componentName = component.name;
-      const componentContexts = contexts.filter(context => 
-        context.componentName === componentName
-      );
-      component.contextUsed = componentContexts.map(context => context.id);
-    });
 
     kgNodesByFile.set(normalizedPath, fileNodes);
   }

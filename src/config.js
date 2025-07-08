@@ -2,10 +2,10 @@ const path = require('path');
 
 module.exports = {
   // Define the root directory of the project to be analyzed
-  projectRoot: path.resolve(__dirname, '..', '/Users/aneesh/JiraClone/jira_clone/client/src'), // IMPORTANT: Change this to the actual project root
+  projectRoot: path.resolve(__dirname, '..', '/Users/aneesh/grafana/packages/grafana-ui/src'), // IMPORTANT: Change this to the actual project root
 
   // File extensions to include in the analysis
-  fileExtensions: ['.js', '.jsx', '.css', '.scss', '.sass'],
+  fileExtensions: ['.js', '.jsx','ts','tsx', '.css', '.scss', '.sass'],
 
   // Patterns to ignore during file traversal
   ignorePatterns: [
