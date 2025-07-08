@@ -46,7 +46,7 @@ function buildFdg(files, kgNodesByFile) {
             }
           },
           ExportNamedDeclaration(babelPath) {
-            if (babelPath.node.declaration) {
+            if (babelPath.node.declaration && babelPath.node.declaration.id) {
               exports.push(babelPath.node.declaration.id.name);
             }
           },

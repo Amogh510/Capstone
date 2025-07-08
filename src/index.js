@@ -29,6 +29,10 @@ async function main() {
     const fileNodes = [];
 
     const components = extractComponents({ ast, filePath: normalizedPath });
+    console.log(`File: ${normalizedPath} - Components found: ${components.length}`);
+    if (components.length > 0) {
+      components.forEach(comp => console.log(`  - ${comp.name} (${comp.exportType})`));
+    }
     fileNodes.push(...components);
 
     components.forEach((component) => {

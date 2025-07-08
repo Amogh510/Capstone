@@ -42,6 +42,21 @@ function isComponent(node) {
     return true;
   }
 
+  // Handle variable declarations with arrow functions
+  if (node.type === 'VariableDeclaration') {
+    return node.declarations.some(declarator => {
+      if (declarator.init && isComponent(declarator.init)) {
+        return true;
+      }
+      return false;
+    });
+  }
+
+  // Handle variable declarator with arrow function
+  if (node.type === 'VariableDeclarator' && node.init) {
+    return isComponent(node.init);
+  }
+
   return false;
 }
 
