@@ -5,7 +5,7 @@ module.exports = {
   projectRoot: path.resolve(__dirname, '..', '/Users/aneesh/grafana/packages/grafana-ui/src'), // IMPORTANT: Change this to the actual project root
 
   // File extensions to include in the analysis
-  fileExtensions: ['.js', '.jsx','ts','tsx', '.css', '.scss', '.sass'],
+  fileExtensions: ['.js', '.jsx','ts','tsx', '.story.tsx', '.css', '.scss', '.sass'],
 
   // Patterns to ignore during file traversal
   ignorePatterns: [
