@@ -1,6 +1,7 @@
 const traverse = require('@babel/traverse').default;
 const { createKgNodeId, createHash } = require('../utils/idUtils');
 const { jsxTagAllowList } = require('../config');
+const path = require('path');
 
 /**
  * Extracts JSX element information from a component's AST.
@@ -8,8 +9,10 @@ const { jsxTagAllowList } = require('../config');
  * @param {string} componentName - The name of the component.
  * @returns {object[]} An array of JSX element KG nodes.
  */
-function extractJsxElements({ ast, componentName }) {
+function extractJsxElements({ ast, componentName, filePath }) {
   const jsxElements = [];
+  const fileBaseName = filePath ? path.basename(filePath) : undefined;
+  const componentId = filePath ? createKgNodeId('Component', componentName, undefined, filePath) : undefined;
 
   traverse(ast, {
     JSXOpeningElement(path) {
@@ -48,18 +51,21 @@ function extractJsxElements({ ast, componentName }) {
           }
         });
 
+        // If JSX has id attribute, elementId will be that; otherwise fallback to positional hash
         if (!elementId) {
           const pos = `${path.node.start}-${path.node.end}`;
           elementId = createHash(`${componentName}:${tagName}:${pos}`);
         }
 
-        const nodeId = createKgNodeId('JSXElement', `${tagName}:${elementId}`, componentName);
+        const nodeId = createKgNodeId('JSXElement', `${tagName}:${elementId}`, componentName, filePath);
         jsxElements.push({
           id: nodeId,
           type: 'JSXElement',
           tagName,
           attributes,
-          component: componentName,
+          component: componentId || componentName,
+          componentId,
+          domElementId: elementId,
         });
       }
     },

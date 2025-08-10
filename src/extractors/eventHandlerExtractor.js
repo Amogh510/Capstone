@@ -1,5 +1,6 @@
 const traverse = require('@babel/traverse').default;
 const { createKgNodeId } = require('../utils/idUtils');
+const path = require('path');
 
 /**
  * Extracts event handler information from a component's AST.
@@ -7,8 +8,10 @@ const { createKgNodeId } = require('../utils/idUtils');
  * @param {string} componentName - The name of the component.
  * @returns {object[]} An array of event handler KG nodes.
  */
-function extractEventHandlers({ ast, componentName }) {
+function extractEventHandlers({ ast, componentName, filePath }) {
   const eventHandlers = [];
+  const fileBaseName = filePath ? path.basename(filePath) : undefined;
+  const componentId = filePath ? createKgNodeId('Component', componentName, undefined, filePath) : undefined;
 
   traverse(ast, {
     JSXAttribute(path) {
@@ -25,11 +28,12 @@ function extractEventHandlers({ ast, componentName }) {
             const attachedToJSX = jsxElement ? jsxElement.node.name.name : null;
 
             eventHandlers.push({
-              id: createKgNodeId('EventHandler', fnName, componentName),
+              id: createKgNodeId('EventHandler', fnName, componentName, filePath),
               type: 'EventHandler',
               name: fnName,
               eventType,
-              definedInComponent: componentName,
+              definedInComponent: componentId || componentName,
+              definedInComponentId: componentId,
               attachedToJSX,
             });
           }

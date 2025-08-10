@@ -1,5 +1,6 @@
 const traverse = require('@babel/traverse').default;
 const { createKgNodeId } = require('../utils/idUtils');
+const path = require('path');
 
 /**
  * Extracts hook information from a component's AST.
@@ -7,9 +8,11 @@ const { createKgNodeId } = require('../utils/idUtils');
  * @param {string} componentName - The name of the component.
  * @returns {object[]} An array of hook KG nodes.
  */
-function extractHooks({ ast, componentName }) {
+function extractHooks({ ast, componentName, filePath }) {
   const hooks = [];
+  const fileBaseName = filePath ? path.basename(filePath) : undefined;
   const reactHooks = new Set(['useEffect', 'useContext', 'useMemo', 'useCallback', 'useRef']);
+  const componentId = filePath ? createKgNodeId('Component', componentName, undefined, filePath) : undefined;
 
   traverse(ast, {
     CallExpression(path) {
@@ -21,12 +24,13 @@ function extractHooks({ ast, componentName }) {
         const params = path.get('arguments').map((arg) => arg.toString());
 
         hooks.push({
-          id: createKgNodeId('Hook', hookName, componentName),
+          id: createKgNodeId('Hook', hookName, componentName, filePath),
           type: 'Hook',
           hookName,
           isCustom,
           params,
-          calledInComponent: componentName,
+          calledInComponent: componentId || componentName,
+          calledInComponentId: componentId,
         });
       }
     },

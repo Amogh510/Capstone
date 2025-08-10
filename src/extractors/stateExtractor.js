@@ -1,5 +1,6 @@
 const traverse = require('@babel/traverse').default;
 const { createKgNodeId } = require('../utils/idUtils');
+const path = require('path');
 
 /**
  * Extracts state information from an AST.
@@ -7,8 +8,10 @@ const { createKgNodeId } = require('../utils/idUtils');
  * @param {string} componentName - The name of the component being analyzed.
  * @returns {object[]} An array of state KG nodes.
  */
-function extractStates({ ast, componentName }) {
+function extractStates({ ast, componentName, filePath }) {
   const states = [];
+  const fileBaseName = filePath ? path.basename(filePath) : undefined;
+  const componentId = createKgNodeId('Component', componentName, undefined, filePath);
 
   traverse(ast, {
     CallExpression(path) {
@@ -27,10 +30,11 @@ function extractStates({ ast, componentName }) {
                     ? path.get('arguments.0').toString()
                     : null;
                 states.push({
-                  id: createKgNodeId('State', stateName, componentName),
+                  id: createKgNodeId('State', stateName, componentName, filePath),
                   type: 'State',
                   name: stateName,
-                  declaredInComponent: componentName,
+                  declaredInComponent: componentId || componentName,
+                  declaredInComponentId: componentId,
                   declarationType: callee.name,
                   initialValue,
                 });
@@ -43,10 +47,11 @@ function extractStates({ ast, componentName }) {
                 ? path.get('arguments.0').toString()
                 : null;
             states.push({
-              id: createKgNodeId('State', stateName, componentName),
+              id: createKgNodeId('State', stateName, componentName, filePath),
               type: 'State',
               name: stateName,
-              declaredInComponent: componentName,
+              declaredInComponent: componentId || componentName,
+              declaredInComponentId: componentId,
               declarationType: callee.name,
               initialValue,
             });

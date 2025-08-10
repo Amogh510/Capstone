@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KG Visualizer</title>
+    <script type="text/javascript" src="https://unpkg.com/vis-network@9.1.2/dist/vis-network.min.js"></script>
+    <link href="https://unpkg.com/vis-network@9.1.2/dist/vis-network.min.css" rel="stylesheet" />
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f7f7f7;
+            margin: 0;
+            padding: 0;
+        }
+
+        #main {
+            max-width: 1400px;
+            margin: 30px auto;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px #0001;
+            padding: 24px;
+        }
+
+        #network {
+            width: 100%;
+            height: 700px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: #fafbfc;
+        }
+
+        #controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 16px;
+            align-items: center;
+        }
+
+        #fileInput {
+            margin-right: 8px;
+        }
+
+        #filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #eef2f7;
+            padding: 6px 10px;
+            border-radius: 16px;
+            font-size: 13px;
+        }
+
+        #details {
+            margin-top: 16px;
+            padding: 12px;
+            background: #f0f4f8;
+            border-radius: 6px;
+            min-height: 80px;
+        }
+
+        .label {
+            font-weight: bold;
+        }
+
+        #legend {
+            margin-top: 12px;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            font-size: 13px;
+        }
+
+        .legend-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            border: 1px solid #9995;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="main">
+        <h2>Knowledge Graph Visualizer</h2>
+        <div id="controls">
+            <input type="file" id="fileInput" accept="application/json" />
+            <button id="btnFit">Fit</button>
+            <div id="filters" class="chip">
+                <span class="label">Filters:</span>
+                <label><input type="checkbox" class="filter" data-type="Component" checked /> Component</label>
+                <label><input type="checkbox" class="filter" data-type="Prop" checked /> Prop</label>
+                <label><input type="checkbox" class="filter" data-type="State" checked /> State</label>
+                <label><input type="checkbox" class="filter" data-type="Hook" checked /> Hook</label>
+                <label><input type="checkbox" class="filter" data-type="EventHandler" checked /> EventHandler</label>
+                <label><input type="checkbox" class="filter" data-type="JSXElement" checked /> JSXElement</label>
+                <label><input type="checkbox" class="filter" data-type="Context" checked /> Context</label>
+                <label><input type="checkbox" class="filter" data-type="Route" checked /> Route</label>
+            </div>
+            <div id="edgeFilters" class="chip">
+                <span class="label">Edge Filters:</span>
+                <label><input type="checkbox" id="edgeIntra" checked /> Intra-file</label>
+                <label><input type="checkbox" id="edgeInter" checked /> Inter-file</label>
+            </div>
+            <div id="edgeTypes" class="chip">
+                <span class="label">Edge Types:</span>
+                <label><input type="checkbox" class="edge-type" data-edge="componentHasProp" checked />
+                    componentHasProp</label>
+                <label><input type="checkbox" class="edge-type" data-edge="componentDeclaresState" checked />
+                    componentDeclaresState</label>
+                <label><input type="checkbox" class="edge-type" data-edge="componentUsesHook" checked />
+                    componentUsesHook</label>
+                <label><input type="checkbox" class="edge-type" data-edge="componentDefinesEventHandler" checked />
+                    componentDefinesEventHandler</label>
+                <label><input type="checkbox" class="edge-type" data-edge="componentRendersJsx" checked />
+                    componentRendersJsx</label>
+                <label><input type="checkbox" class="edge-type" data-edge="routeRendersComponent" checked />
+                    routeRendersComponent</label>
+                <label><input type="checkbox" class="edge-type" data-edge="componentRendersComponent" checked />
+                    componentRendersComponent</label>
+            </div>
+        </div>
+        <div id="network"></div>
+        <div id="legend"></div>
+        <div id="details"><span class="label">Node details:</span> <span id="nodeDetails">Select a node to see
+                details.</span></div>
+    </div>
+
+    <script>
+        const kgTypeColors = {
+            Component: '#7B61FF', Prop: '#00B894', State: '#4F8EF7', Hook: '#00BFA5',
+            EventHandler: '#FF7043', JSXElement: '#F7CA18', Context: '#8D6E63', Route: '#26A69A'
+        };
+
+        const edgeTypeColors = {
+            componentHasProp: '#9E9E9E',
+            componentDeclaresState: '#42A5F5',
+            componentUsesHook: '#26A69A',
+            componentDefinesEventHandler: '#FB8C00',
+            componentRendersJsx: '#FBC02D',
+            routeRendersComponent: '#26C6DA',
+            componentRendersComponent: '#8E24AA'
+        };
+
+        function makeLegend() {
+            const legend = document.getElementById('legend');
+            legend.innerHTML = '';
+            const add = (label, color) => {
+                const el = document.createElement('div');
+                el.className = 'legend-item';
+                el.innerHTML = `<span class="dot" style="background:${color}"></span>${label}`;
+                legend.appendChild(el);
+            };
+            Object.entries(kgTypeColors).forEach(([t, c]) => add(t, c));
+        }
+
+        function nodeColor(n) {
+            const t = n.type || 'Component';
+            return kgTypeColors[t] || '#888';
+        }
+
+        function nodeShape(n) {
+            if (n.type === 'Component') return 'database';
+            if (n.type === 'JSXElement') return 'dot';
+            return 'ellipse';
+        }
+
+        function labelForNode(n) {
+            switch (n.type) {
+                case 'Component': return n.name || n.id;
+                case 'Prop': return `prop:${n.name}`;
+                case 'State': return `state:${n.name}`;
+                case 'Hook': return n.hookName || 'hook';
+                case 'EventHandler': return n.name || 'handler';
+                case 'JSXElement': return n.tagName + (n.domElementId ? `#${n.domElementId}` : '');
+                case 'Context': return n.name || 'context';
+                case 'Route': return n.path || 'route';
+                default: return n.id;
+            }
+        }
+
+        let rawKg = null;
+        let network = null;
+        let dataSetNodes = null;
+        let dataSetEdges = null;
+
+        function buildData(kg) {
+            const allowedTypes = new Set();
+            document.querySelectorAll('.filter').forEach(cb => { if (cb.checked) allowedTypes.add(cb.dataset.type); });
+
+            const showIntra = document.getElementById('edgeIntra').checked;
+            const showInter = document.getElementById('edgeInter').checked;
+            const allowedEdgeTypes = new Set();
+            document.querySelectorAll('.edge-type').forEach(cb => { if (cb.checked) allowedEdgeTypes.add(cb.dataset.edge); });
+
+            const idExists = new Set();
+            const nodes = [];
+            (kg.nodes || []).forEach(n => {
+                if (!allowedTypes.has(n.type)) return;
+                nodes.push({
+                    id: n.id,
+                    label: labelForNode(n),
+                    title: JSON.stringify(n, null, 2),
+                    color: nodeColor(n),
+                    shape: nodeShape(n),
+                    font: { color: '#222', size: 14 },
+                });
+                idExists.add(n.id);
+            });
+
+            const edges = [];
+            (kg.edges || []).forEach(e => {
+                const fromOk = idExists.has(e.from);
+                const toOk = idExists.has(e.to);
+                if (!fromOk || !toOk) return;
+                if (e.intraFile === true && !showIntra) return;
+                if (e.intraFile === false && !showInter) return;
+                if (e.type && !allowedEdgeTypes.has(e.type)) return;
+                const color = edgeTypeColors[e.type] || '#A0A0A0';
+                edges.push({
+                    from: e.from, to: e.to, arrows: 'to',
+                    color: { color }, label: e.type || '',
+                    font: { align: 'horizontal', size: 11, color: '#666' },
+                    smooth: { type: 'cubicBezier' },
+                });
+            });
+
+            return { nodes, edges };
+        }
+
+        function render(kg) {
+            rawKg = kg;
+            const { nodes, edges } = buildData(kg);
+            dataSetNodes = new vis.DataSet(nodes);
+            dataSetEdges = new vis.DataSet(edges);
+            const container = document.getElementById('network');
+            container.innerHTML = '';
+            const data = { nodes: dataSetNodes, edges: dataSetEdges };
+            const options = {
+                layout: { improvedLayout: true },
+                physics: { stabilization: true, barnesHut: { springLength: 130 }, enabled: true, solver: 'barnesHut' },
+                interaction: { hover: true, tooltipDelay: 100 },
+                nodes: { borderWidth: 1, borderWidthSelected: 2 },
+                edges: { smooth: true },
+            };
+            network = new vis.Network(container, data, options);
+
+            network.on('selectNode', function (params) {
+                const nodeId = params.nodes[0];
+                const node = (rawKg.nodes || []).find(n => n.id === nodeId);
+                if (node) {
+                    document.getElementById('nodeDetails').innerHTML = `<pre style="white-space:pre-wrap; margin:0;">${JSON.stringify(node, null, 2)}</pre>`;
+                }
+            });
+            network.on('deselectNode', function () {
+                document.getElementById('nodeDetails').innerText = 'Select a node to see details.';
+            });
+
+            network.once('stabilized', function () { network.fit(); });
+        }
+
+        document.getElementById('fileInput').addEventListener('change', function (e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function (evt) {
+                try {
+                    const kg = JSON.parse(evt.target.result);
+                    if (!kg.nodes) throw new Error('Invalid KG format: missing nodes');
+                    makeLegend();
+                    render(kg);
+                } catch (err) {
+                    alert('Error: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        // Rebuild when filters change
+        document.querySelectorAll('.filter, #edgeIntra, #edgeInter, .edge-type').forEach(cb => {
+            cb.addEventListener('change', () => {
+                if (!rawKg || !dataSetNodes || !dataSetEdges) return;
+                const { nodes, edges } = buildData(rawKg);
+                dataSetNodes.clear();
+                dataSetNodes.add(nodes);
+                dataSetEdges.clear();
+                dataSetEdges.add(edges);
+            });
+        });
+
+        document.getElementById('btnFit').addEventListener('click', () => {
+            if (network) network.fit();
+        });
+    </script>
+</body>
+
+</html>

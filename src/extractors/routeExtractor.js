@@ -1,5 +1,6 @@
 const traverse = require('@babel/traverse').default;
 const { createKgNodeId } = require('../utils/idUtils');
+const path = require('path');
 
 /**
  * Extracts route information from an AST.
@@ -10,6 +11,7 @@ const { createKgNodeId } = require('../utils/idUtils');
 function extractRoutes({ ast, filePath }) {
   const routes = [];
   let declareRoutes = false;
+  const fileBaseName = filePath ? path.basename(filePath) : undefined;
 
   traverse(ast, {
     JSXOpeningElement(path) {
@@ -33,7 +35,7 @@ function extractRoutes({ ast, filePath }) {
         if (routePath) {
           declareRoutes = true;
           routes.push({
-            id: createKgNodeId('Route', routePath),
+            id: createKgNodeId('Route', routePath, undefined, filePath),
             type: 'Route',
             path: routePath,
             element,

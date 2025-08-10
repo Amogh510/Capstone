@@ -15,6 +15,7 @@ const { extractRoutes } = require('./extractors/routeExtractor');
 
 const { buildFdg } = require('./fdgBuilder');
 const { buildKg } = require('./kgNodeBuilder');
+const { buildUnifiedGraph } = require('./unifiedGraphBuilder');
 
 async function main() {
   console.log('Starting analysis...');
@@ -45,11 +46,11 @@ async function main() {
         const componentName = component.name;
         
         // Extract states, props, hooks, event handlers, and JSX elements
-        const states = extractStates({ ast, componentName });
+        const states = extractStates({ ast, componentName, filePath: normalizedPath });
         const props = extractProps({ ast, componentName, filePath: normalizedPath });
-        const hooks = extractHooks({ ast, componentName });
-        const eventHandlers = extractEventHandlers({ ast, componentName });
-        const jsxElements = extractJsxElements({ ast, componentName });
+        const hooks = extractHooks({ ast, componentName, filePath: normalizedPath });
+        const eventHandlers = extractEventHandlers({ ast, componentName, filePath: normalizedPath });
+        const jsxElements = extractJsxElements({ ast, componentName, filePath: normalizedPath });
         
         // Add all extracted data to file nodes
         fileNodes.push(...states, ...props, ...hooks, ...eventHandlers, ...jsxElements);
@@ -110,7 +111,21 @@ async function main() {
   });
 
   writeJsonFile(path.join(outputDir, 'fdg.json'), fdg);
+
+  // Build inter-file KG edges
+  const { buildInterFileKgEdges } = require('./interFileKgEdgeBuilder');
+  const interFileEdges = buildInterFileKgEdges(fdg, kgNodesByFile);
+
+  // Merge inter-file edges into KG
+  if (!Array.isArray(kg.edges)) kg.edges = [];
+  kg.edges.push(...interFileEdges);
+
+  // Write updated KG (with intra-file and inter-file edges)
   writeJsonFile(path.join(outputDir, 'kg.json'), kg);
+
+  // Build and write unified graph with connecting edges
+  const unified = buildUnifiedGraph(fdg, kg, kgNodesByFile);
+  writeJsonFile(path.join(outputDir, 'unified.json'), unified);
 
   console.log('Analysis complete.');
 }

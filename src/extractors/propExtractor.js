@@ -1,5 +1,6 @@
 const traverse = require('@babel/traverse').default;
 const { createKgNodeId } = require('../utils/idUtils');
+const path = require('path');
 
 /**
  * Extracts prop information from a component's AST.
@@ -10,6 +11,8 @@ const { createKgNodeId } = require('../utils/idUtils');
  */
 function extractProps({ ast, componentName, filePath }) {
   const props = [];
+  const fileBaseName = filePath ? path.basename(filePath) : undefined;
+  const componentId = filePath ? createKgNodeId('Component', componentName, undefined, filePath) : undefined;
 
   traverse(ast, {
     FunctionDeclaration(path) {
@@ -21,10 +24,11 @@ function extractProps({ ast, componentName, filePath }) {
             propsParam.properties.forEach((prop) => {
               if (prop && prop.key && prop.key.name) {
                 props.push({
-                  id: createKgNodeId('Prop', prop.key.name, componentName),
+                  id: createKgNodeId('Prop', prop.key.name, componentName, filePath),
                   type: 'Prop',
                   name: prop.key.name,
-                  passedToComponent: componentName,
+                  passedToComponent: componentId || componentName,
+                  passedToComponentName: componentName,
                   passedFromFile: filePath,
                   valueType: 'unknown', // This is hard to determine statically
                 });
@@ -50,10 +54,11 @@ function extractProps({ ast, componentName, filePath }) {
             propsParam.properties.forEach((prop) => {
               if (prop && prop.key && prop.key.name) {
                 props.push({
-                  id: createKgNodeId('Prop', prop.key.name, componentName),
+                  id: createKgNodeId('Prop', prop.key.name, componentName, filePath),
                   type: 'Prop',
                   name: prop.key.name,
-                  passedToComponent: componentName,
+                  passedToComponent: componentId || componentName,
+                  passedToComponentName: componentName,
                   passedFromFile: filePath,
                   valueType: 'unknown',
                 });
@@ -67,10 +72,11 @@ function extractProps({ ast, componentName, filePath }) {
         if (path.node.object && path.node.object.name === 'props' && path.node.property && path.node.property.name) {
             const propName = path.node.property.name;
             props.push({
-                id: createKgNodeId('Prop', propName, componentName),
+                id: createKgNodeId('Prop', propName, componentName, filePath),
                 type: 'Prop',
                 name: propName,
-                passedToComponent: componentName,
+                passedToComponent: componentId || componentName,
+                passedToComponentName: componentName,
                 passedFromFile: filePath,
                 valueType: 'unknown',
             });

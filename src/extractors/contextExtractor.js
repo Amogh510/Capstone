@@ -1,5 +1,6 @@
 const traverse = require('@babel/traverse').default;
 const { createKgNodeId } = require('../utils/idUtils');
+const path = require('path');
 
 /**
  * Extracts context information from an AST.
@@ -10,6 +11,7 @@ const { createKgNodeId } = require('../utils/idUtils');
 function extractContexts({ ast, filePath }) {
   const contexts = [];
   let providerFilePath = null;
+  const fileBaseName = filePath ? path.basename(filePath) : undefined;
 
   traverse(ast, {
     CallExpression(path) {
@@ -21,11 +23,12 @@ function extractContexts({ ast, filePath }) {
           const contextName = variableDeclarator.node.id.name;
           providerFilePath = filePath;
           contexts.push({
-            id: createKgNodeId('Context', contextName),
+            id: createKgNodeId('Context', contextName, undefined, filePath),
             type: 'Context',
             name: contextName,
             usedInComponent: [], // Will be populated later
             providerFilePath,
+            providerFileBaseName: fileBaseName,
           });
         }
       } else if (path.node.callee.name === 'useContext') {
