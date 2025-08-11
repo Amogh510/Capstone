@@ -112,6 +112,10 @@
                 <label><input type="checkbox" class="filter" data-type="EventHandler" checked /> EventHandler</label>
                 <label><input type="checkbox" class="filter" data-type="JSXElement" checked /> JSXElement</label>
                 <label><input type="checkbox" class="filter" data-type="Context" checked /> Context</label>
+                <label><input type="checkbox" class="filter" data-type="CSSSelector" checked /> CSSSelector</label>
+                <label><input type="checkbox" class="filter" data-type="InlineStyle" checked /> InlineStyle</label>
+                <label><input type="checkbox" class="filter" data-type="TailwindUtility" checked />
+                    TailwindUtility</label>
                 <label><input type="checkbox" class="filter" data-type="Route" checked /> Route</label>
             </div>
             <div id="edgeFilters" class="chip">
@@ -135,6 +139,20 @@
                     routeRendersComponent</label>
                 <label><input type="checkbox" class="edge-type" data-edge="componentRendersComponent" checked />
                     componentRendersComponent</label>
+                <label><input type="checkbox" class="edge-type" data-edge="componentUsesCssSelector" checked />
+                    componentUsesCssSelector</label>
+                <label><input type="checkbox" class="edge-type" data-edge="jsxHasClass" checked />
+                    jsxHasClass</label>
+                <label><input type="checkbox" class="edge-type" data-edge="jsxHasId" checked />
+                    jsxHasId</label>
+                <label><input type="checkbox" class="edge-type" data-edge="jsxMatchesTagSelector" checked />
+                    jsxMatchesTagSelector</label>
+                <label><input type="checkbox" class="edge-type" data-edge="componentHasInlineStyle" checked />
+                    componentHasInlineStyle</label>
+                <label><input type="checkbox" class="edge-type" data-edge="jsxHasInlineStyle" checked />
+                    jsxHasInlineStyle</label>
+                <label><input type="checkbox" class="edge-type" data-edge="componentUsesTailwindUtility" checked />
+                    componentUsesTailwindUtility</label>
             </div>
         </div>
         <div id="network"></div>
@@ -146,7 +164,7 @@
     <script>
         const kgTypeColors = {
             Component: '#7B61FF', Prop: '#00B894', State: '#4F8EF7', Hook: '#00BFA5',
-            EventHandler: '#FF7043', JSXElement: '#F7CA18', Context: '#8D6E63', Route: '#26A69A'
+            EventHandler: '#FF7043', JSXElement: '#F7CA18', Context: '#8D6E63', CSSSelector: '#9C27B0', InlineStyle: '#6D4C41', TailwindUtility: '#1E88E5', Route: '#26A69A'
         };
 
         const edgeTypeColors = {
@@ -156,7 +174,14 @@
             componentDefinesEventHandler: '#FB8C00',
             componentRendersJsx: '#FBC02D',
             routeRendersComponent: '#26C6DA',
-            componentRendersComponent: '#8E24AA'
+            componentRendersComponent: '#8E24AA',
+            componentUsesCssSelector: '#7B1FA2',
+            jsxHasClass: '#AB47BC',
+            jsxHasId: '#8E24AA',
+            jsxMatchesTagSelector: '#5E35B1',
+            componentHasInlineStyle: '#4E342E',
+            jsxHasInlineStyle: '#6D4C41',
+            componentUsesTailwindUtility: '#1565C0'
         };
 
         function makeLegend() {
@@ -191,6 +216,9 @@
                 case 'EventHandler': return n.name || 'handler';
                 case 'JSXElement': return n.tagName + (n.domElementId ? `#${n.domElementId}` : '');
                 case 'Context': return n.name || 'context';
+                case 'CSSSelector': return n.selectorText || 'selector';
+                case 'InlineStyle': return 'inline-style';
+                case 'TailwindUtility': return n.name || 'tw';
                 case 'Route': return n.path || 'route';
                 default: return n.id;
             }
