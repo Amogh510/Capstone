@@ -20,8 +20,10 @@ function extractJsxElements({ ast, componentName, filePath }) {
         return; // Skip elements without valid names
       }
       const tagName = path.node.name.name;
-      if (jsxTagAllowList.includes(tagName)) {
+      {
         const attributes = {};
+        const classNames = [];
+        let inlineStyleExpr = null;
         let elementId = null;
 
         const attributesPath = path.get('attributes');
@@ -39,10 +41,23 @@ function extractJsxElements({ ast, componentName, filePath }) {
           if (attrValue) {
             if (attrValue.type === 'StringLiteral') {
               attributes[attrName] = attrValue.value;
+              if (attrName === 'className') {
+                attrValue.value.split(/\s+/).forEach((t) => t && classNames.push(t));
+              }
             } else if (attrValue.type === 'JSXExpressionContainer') {
               attributes[attrName] = attributePath
                 .get('value.expression')
                 .toString();
+              if (attrName === 'className') {
+                try {
+                  const text = attributePath.get('value.expression').toString();
+                  text.replace(/[`'"+{}()]/g, ' ').split(/\s+/).forEach((t) => t && classNames.push(t));
+                } catch (e) {}
+              } else if (attrName === 'style') {
+                try {
+                  inlineStyleExpr = attributePath.get('value.expression').toString();
+                } catch (e) {}
+              }
             }
           }
 
@@ -66,6 +81,8 @@ function extractJsxElements({ ast, componentName, filePath }) {
           component: componentId || componentName,
           componentId,
           domElementId: elementId,
+          classNames,
+          inlineStyleExpr,
         });
       }
     },

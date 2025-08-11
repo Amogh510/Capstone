@@ -16,6 +16,7 @@ const { extractRoutes } = require('./extractors/routeExtractor');
 const { buildFdg } = require('./fdgBuilder');
 const { buildKg } = require('./kgNodeBuilder');
 const { buildUnifiedGraph } = require('./unifiedGraphBuilder');
+const { extractCssSelectors } = require('./extractors/cssExtractor');
 
 async function main() {
   console.log('Starting analysis...');
@@ -75,13 +76,21 @@ async function main() {
         component.contextUsed = componentContexts.map(context => context.id);
       });
     } else if (isStyle) {
-      console.log(`File: ${normalizedPath} - Style file (no AST analysis)`);
+      // Parse CSS/SCSS/SASS and add CSSSelector nodes
+      console.log(`File: ${normalizedPath} - Style file (CSS analysis)`);
+      const cssSelectors = extractCssSelectors({ filePath: normalizedPath });
+      fileNodes.push(...cssSelectors);
     }
 
     kgNodesByFile.set(normalizedPath, fileNodes);
   }
 
   const fdg = buildFdg(files, kgNodesByFile);
+
+  // Build CSS link edges and add Tailwind/InlineStyle nodes before KG aggregation
+  const { buildCssLinks } = require('./cssLinkBuilder');
+  const cssLinkResult = buildCssLinks(fdg, kgNodesByFile);
+
   let kg = buildKg(kgNodesByFile);
 
   // Deduplicate props, hooksUsed, and contextUsed for each component node
@@ -118,6 +127,10 @@ async function main() {
 
   // Merge inter-file edges into KG
   if (!Array.isArray(kg.edges)) kg.edges = [];
+  // Add CSS edges first
+  if (cssLinkResult && Array.isArray(cssLinkResult.edges)) {
+    kg.edges.push(...cssLinkResult.edges);
+  }
   kg.edges.push(...interFileEdges);
 
   // Write updated KG (with intra-file and inter-file edges)
