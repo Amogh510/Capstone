@@ -243,17 +243,25 @@ function buildCssLinks(fdg, kgNodesByFile) {
         const jsxNodes = fileKgNodes.filter((n) => n.type === 'JSXElement' && n.tagName === e.tag);
         // Class-based matches
         (e.classNames || []).forEach((cn) => {
-          // Tailwind utility edge from component to utility node
+          // Tailwind utility edge: connect JSX elements directly to utility nodes
           const twNodeId = createKgNodeId('TailwindUtility', cn, compName, fileId);
-          add(compId, twNodeId, 'componentUsesTailwindUtility', true);
+          // Link JSX elements to Tailwind utility
+          jsxNodes.forEach((j) => add(j.id, twNodeId, 'jsxUsesTailwindUtility', true));
+          // Fallback: if no JSX nodes found, link to component
+          if (jsxNodes.length === 0) {
+            add(compId, twNodeId, 'componentUsesTailwindUtility', true);
+          }
 
           // Match CSS class selectors from candidate style files
           styleIndices.forEach((idx) => {
             const list = (idx.classes.get(cn) || []);
             list.forEach((sel) => {
-              add(compId, sel.id, 'componentUsesCssSelector', false);
-              // Also link JSXElement to CSS selector when we can
+              // Primary: link JSX elements to CSS selectors
               jsxNodes.forEach((j) => add(j.id, sel.id, 'jsxHasClass', false));
+              // Fallback: if no JSX nodes found, link to component
+              if (jsxNodes.length === 0) {
+                add(compId, sel.id, 'componentUsesCssSelector', false);
+              }
             });
           });
         });
@@ -263,8 +271,12 @@ function buildCssLinks(fdg, kgNodesByFile) {
           styleIndices.forEach((idx) => {
             const list = (idx.ids.get(e.idValue) || []);
             list.forEach((sel) => {
-              add(compId, sel.id, 'componentUsesCssSelector', false);
+              // Primary: link JSX elements to CSS selectors by ID
               jsxNodes.forEach((j) => add(j.id, sel.id, 'jsxHasId', false));
+              // Fallback: if no JSX nodes found, link to component
+              if (jsxNodes.length === 0) {
+                add(compId, sel.id, 'componentUsesCssSelector', false);
+              }
             });
           });
         }
@@ -273,16 +285,24 @@ function buildCssLinks(fdg, kgNodesByFile) {
         styleIndices.forEach((idx) => {
           const list = (idx.tags.get(e.tag.toLowerCase()) || []);
           list.forEach((sel) => {
-            add(compId, sel.id, 'componentMatchesTagSelector', false);
+            // Primary: link JSX elements to CSS selectors by tag
             jsxNodes.forEach((j) => add(j.id, sel.id, 'jsxMatchesTagSelector', false));
+            // Fallback: if no JSX nodes found, link to component
+            if (jsxNodes.length === 0) {
+              add(compId, sel.id, 'componentMatchesTagSelector', false);
+            }
           });
         });
 
         // Inline style edges
         if (e.inlineStyleExpr) {
           const inlineNodeId = createKgNodeId('InlineStyle', `${compName}:${idx}`, compName, fileId);
-          add(compId, inlineNodeId, 'componentHasInlineStyle', true);
+          // Primary: link JSX elements to inline styles
           jsxNodes.forEach((j) => add(j.id, inlineNodeId, 'jsxHasInlineStyle', true));
+          // Fallback: if no JSX nodes found, link to component
+          if (jsxNodes.length === 0) {
+            add(compId, inlineNodeId, 'componentHasInlineStyle', true);
+          }
         }
       });
 
