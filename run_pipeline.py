@@ -274,7 +274,7 @@ def start_retrieval_service(cfg: Neo4jConfig):
     venv_py = os.path.join(venv_dir, "bin", "python")
     if sys.platform.startswith("win"):
         venv_py = os.path.join(venv_dir, "Scripts", "python.exe")
-    proc = subprocess.Popen([venv_py, "main.py"], cwd=RETRIEVAL_DIR, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    proc = subprocess.Popen([venv_py, "test.py"], cwd=RETRIEVAL_DIR, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
 
     def _log_stream():
         for ln in proc.stdout:  # type: ignore[arg-type]

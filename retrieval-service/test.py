@@ -559,7 +559,7 @@ class KnowledgeGraphRetriever:
                 if sid == tid:
                     continue
                 cypher = f"""
-                MATCH (a:KGNode {id: $sid}), (b:KGNode {id: $tid})
+                MATCH (a:KGNode {{id: $sid}}), (b:KGNode {{id: $tid}})
                 MATCH p=shortestPath((a)-[:KGR*..{int(max_len)}]-(b))
                 RETURN p
                 LIMIT {int(limit)}

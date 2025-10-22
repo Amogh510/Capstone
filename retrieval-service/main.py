@@ -498,20 +498,52 @@ class KnowledgeGraphRetriever:
         graph_bundle = self._build_graph_bundle(nodes, relationships)
         bundle_json = json.dumps(graph_bundle, indent=2)[:12000]  # cap prompt size
         context_text = self._format_for_llm(nodes, relationships, question)
-        prompt = (
-            "You are a senior UI engineer. You are given a knowledge graph extracted from a large React UI codebase.\n"
-            "Use the provided graph bundle and summary to answer the question precisely.\n"
-            "- Prioritize Components and their relationships (props, hooks, jsx, routes).\n"
-            "- When relevant, list key files and components.\n"
-            "- Reference component names and file paths.\n"
-            "- If multiple relevant components exist, rank them and explain why.\n"
-            "- Suggest next code files to inspect if needed.\n\n"
-            f"Question:\n{question}\n\n"
-            f"Graph Summary:\n{context_text}\n\n"
-            f"Graph Bundle (JSON):\n{bundle_json}\n\n"
-            "Answer in a concise, structured way with bullet points and short explanations."
-        )
+
+        prompt = f"""
+    You are a **senior UI engineer** acting as a **precise codebase guide**.
+    You are given a **knowledge graph** extracted from a large React UI codebase.
+
+    ## Your mission
+    Answer the user's question **exactly** using ONLY the supplied context.
+    Prefer **Components** and their relationships (props, hooks, JSX, routes, imports).
+    Return a **concise, decision-oriented** answer with explicit references to files/components.
+
+    ## Context you must use
+    ### Graph Summary (human-readable)
+    {context_text}
+
+    ### Graph Bundle (machine-readable JSON; do not alter keys)
+    {bundle_json}
+
+    ## Decision rules (apply in order)
+    1. **Grounding:** Only rely on names/paths/edges present in the bundle/summary. **Do not invent** files, components, props, or hooks.
+    2. **Relevance ranking (higher is better):**
+    - Exact component/file name match to the question.
+    - Components that are central (many meaningful edges: HAS_PROP, USES_HOOK, RENDERS, ROUTES_TO, IMPORTS).
+    - Nodes closer to seed components (lower hop distance).
+    - Files that co-locate related components/JSX/props.
+    3. **Disambiguation:** If multiple candidates fit, create a small ranked table with brief "why" justifications. Prefer components that **directly own state** or **wire hooks** that affect the behavior asked about.
+    4. **Honesty over speculation:** If context is insufficient, say **"Insufficient context"**, list exactly what’s missing, and propose **up to 3** next files to inspect from the bundle (by path).
+    5. **No chain-of-thought dumps:** Use brief rationales (one line each). Do **not** reveal step-by-step internal reasoning.
+
+    ## Output format (follow exactly)
+    - Start with **Answer**: 2–6 bullet points that directly address the question.
+    - Then **Key Components & Files**: a compact table with columns: *Rank | Component | File Path | Why it’s relevant*.
+    - Then **Data/Flow Signals** (if applicable): bullets for Hooks, State, Props, and Routes involved.
+    - Then **Next Files to Inspect** (if further work is needed): up to 5 file paths.
+    - Then **Assumptions & Uncertainties**: short bullets, if any.
+    - End with a **JSON summary block** (on a new line) with this exact schema:
+
+    ```json
+    {{
+    "top_components": ["<ComponentName1>", "<ComponentName2>"],
+    "top_files": ["<path/one.jsx>", "<path/two.tsx>"],
+    "reason_short": "<one-line justification>",
+    "confidence": "<low|medium|high>"
+    }}
+    """
         return prompt
+
 
     def _call_ollama(self, prompt: str, model: Optional[str] = None) -> str:
         base = self.config.ollama_base_url.rstrip('/')

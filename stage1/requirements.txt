@@ -1,0 +1,8 @@
+neo4j==5.15.0
+sentence-transformers>=2.7.0
+torch
+transformers
+langchain>=0.2.0
+langchain-community>=0.2.0
+litellm>=1.78.0
+

@@ -2,7 +2,7 @@ const path = require('path');
 
 module.exports = {
   // Define the root directory of the project to be analyzed
-  projectRoot: path.resolve(__dirname, '..', '/Users/aneesh/Authify/ExampleBrand1/client/src'), // IMPORTANT: Change this to the actual project root
+  projectRoot: path.resolve(__dirname, '..', '/Users/aneesh/CapstoneTest/frontend/src'), // IMPORTANT: Change this to the actual project root
 
   // File extensions to include in the analysis
   fileExtensions: ['.js', '.jsx', '.ts', '.tsx', '.css', '.scss', '.sass'],
