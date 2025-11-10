@@ -126,13 +126,31 @@ class SubgraphRetriever:
         components = structured_input.get("components", [])
         
         if not routes and not components:
-            return {"nodes": [], "edges": [], "summary": {}}
+            return {
+                "nodes": [], 
+                "edges": [], 
+                "summary": {
+                    "node_count": 0,
+                    "edge_count": 0,
+                    "node_types": {},
+                    "edge_types": {}
+                }
+            }
         
         # Step 1: Find seed nodes (routes and components)
         seed_nodes = self._find_seed_nodes(routes, components)
         
         if not seed_nodes:
-            return {"nodes": [], "edges": [], "summary": {}}
+            return {
+                "nodes": [], 
+                "edges": [], 
+                "summary": {
+                    "node_count": 0,
+                    "edge_count": 0,
+                    "node_types": {},
+                    "edge_types": {}
+                }
+            }
         
         # Step 2: Expand subgraph from seed nodes
         nodes, edges = self._expand_subgraph(seed_nodes, depth)
