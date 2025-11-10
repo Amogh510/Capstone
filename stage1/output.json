@@ -1,0 +1,114 @@
+[
+  {
+    "id": "TC01",
+    "title": "Verify successful login redirects to dashboard",
+    "steps": [
+      "Navigate to /login",
+      "Enter valid email and password",
+      "Click the 'Login' button",
+      "Wait for authentication to complete",
+      "Verify redirection to /dashboard",
+      "Check that user name is visible in the dashboard header"
+    ],
+    "expected_result": "User is redirected to dashboard and authenticated session is stored"
+  },
+  {
+    "id": "TC02",
+    "title": "Verify invalid login shows error message",
+    "steps": [
+      "Navigate to /login",
+      "Enter invalid credentials (wrong password)",
+      "Click the 'Login' button",
+      "Check for toast notification with text 'Invalid credentials'"
+    ],
+    "expected_result": "Error message is shown and user remains on login page"
+  },
+  {
+    "id": "TC03",
+    "title": "Verify unauthenticated user is redirected from dashboard to login",
+    "steps": [
+      "Clear localStorage token",
+      "Navigate directly to /dashboard",
+      "Verify redirection back to /login"
+    ],
+    "expected_result": "Unauthorized users cannot access dashboard"
+  },
+  {
+    "id": "TC04",
+    "title": "Check if user data is fetched after login",
+    "steps": [
+      "Login successfully",
+      "Wait for dashboard to load",
+      "Inspect network call to /users endpoint",
+      "Verify response data populates user name, profile image, and stats"
+    ],
+    "expected_result": "User information is correctly displayed on dashboard"
+  },
+  {
+    "id": "TC05",
+    "title": "Verify todos load successfully after dashboard",
+    "steps": [
+      "Login successfully",
+      "Navigate to /dashboard/todos",
+      "Wait for API call to /todos to resolve",
+      "Verify todo items are rendered in the table"
+    ],
+    "expected_result": "All existing todos are displayed correctly"
+  },
+  {
+    "id": "TC06",
+    "title": "Add a new todo item successfully",
+    "steps": [
+      "Login successfully",
+      "Navigate to /dashboard/todos",
+      "Click 'Add Todo' button",
+      "Enter 'Buy groceries' in input field",
+      "Click 'Save'",
+      "Verify new todo appears in the list"
+    ],
+    "expected_result": "New todo is displayed in the list with correct text"
+  },
+  {
+    "id": "TC07",
+    "title": "Delete a todo item successfully",
+    "steps": [
+      "Login successfully",
+      "Navigate to /dashboard/todos",
+      "Click delete icon on first todo",
+      "Confirm deletion in modal",
+      "Verify todo disappears from list"
+    ],
+    "expected_result": "Todo is removed from UI and deleted from API"
+  },
+  {
+    "id": "TC08",
+    "title": "Verify error state when todo API fails",
+    "steps": [
+      "Simulate API failure for /todos (mock 500)",
+      "Login successfully",
+      "Navigate to /dashboard/todos",
+      "Observe error boundary or retry button display"
+    ],
+    "expected_result": "Error message and retry button shown when API fails"
+  },
+  {
+    "id": "TC09",
+    "title": "Verify keyboard navigation on login form",
+    "steps": [
+      "Navigate to /login",
+      "Use TAB key to switch between email, password, and submit button",
+      "Ensure visible focus state appears on each element"
+    ],
+    "expected_result": "Keyboard navigation works correctly with visible focus indicators"
+  },
+  {
+    "id": "TC10",
+    "title": "Check ARIA accessibility in todo list",
+    "steps": [
+      "Login successfully",
+      "Navigate to /dashboard/todos",
+      "Inspect DOM elements for ARIA attributes on add button, input field, and list items"
+    ],
+    "expected_result": "All interactive elements have correct ARIA roles and labels"
+  }
+]

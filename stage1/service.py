@@ -47,7 +47,7 @@ except ImportError:
 
 # Embeddings via LangChain (HuggingFace local by default)
 try:
-    from langchain_community.embeddings import HuggingFaceEmbeddings
+    from langchain_huggingface import HuggingFaceEmbeddings
 except Exception:  # pragma: no cover
     HuggingFaceEmbeddings = None  # type: ignore
 
