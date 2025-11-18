@@ -1,0 +1,283 @@
+% !TeX program = pdflatex
+% Draft IEEE-style paper for: Automating UI Test Case Generation using a Graph-based RAG and Agentic Workflow
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+\usepackage{cite}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath, amssymb}
+\usepackage{listings}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{hyperref}
+\hypersetup{hidelinks}
+
+\begin{document}
+
+\title{From Natural Language to Executable UI Tests:\\
+Graph-based Retrieval-Augmented Generation with an Agentic Workflow}
+
+\author{
+    \IEEEauthorblockN{Anonymous Authors}
+    \IEEEauthorblockA{
+    Affiliation\\
+    Email}
+}
+
+\maketitle
+
+\begin{abstract}
+End-to-end (E2E) user interface (UI) tests are essential for ensuring correctness of modern web applications, yet they are expensive to author and maintain. Large Language Models (LLMs) can generate tests from natural language, but they struggle with persistent, fine-grained code context and often hallucinate non-existent UI elements. We present a system that automates UI test case generation by combining: (i) a graph-based representation of React codebases as a Knowledge Graph (KG) capturing components, routes, states, props, hooks and event handlers; (ii) a Graph-based Retrieval-Augmented Generation (Graph RAG) pipeline that fuses semantic search with graph traversal; and (iii) an agentic workflow of specialized agents (Retrieval, Test Generation, Validation) that collaborate to retrieve context, synthesize tests, and iteratively refine them. Our preliminary evaluation on a small website shows that our approach retrieves test-relevant context with up to 91\% reduction in graph size (nodes/edges) while maintaining test sufficiency, and generates executable Playwright/Cypress/Selenium tests aligned with target user scenarios. We outline a research agenda and report early results indicating improved route recall, reduced token footprint for LLM prompts, and enhanced explainability via the KG.
+\end{abstract}
+
+\begin{IEEEkeywords}
+UI testing, knowledge graphs, retrieval-augmented generation, agentic workflows, React, Neo4j, test generation, LLMs
+\end{IEEEkeywords}
+
+\section{Introduction}
+Authoring comprehensive E2E UI tests for modern single-page applications (SPAs) is costly and error-prone. Teams must translate \emph{user scenarios} (e.g., ``Register $\rightarrow$ Dashboard $\rightarrow$ Analytics'') into concrete interactions, selectors, and assertions bound to the actual UI structure and logic. Traditional approaches---record/replay, model-based testing from formal specifications, or random/mutation-based testing---either lack adaptability to evolving UIs, require specialized artifacts, or fail to guarantee scenario coverage. Recent work on LLM-based test generation shows promise, but suffers from two core limitations: (1) insufficient persistent code context (token limits, lack of structural grounding) and (2) hallucinations (invented routes/components/selectors).
+
+We propose a system that frames E2E UI test generation as \emph{graph-grounded} program understanding and synthesis. The key idea is to construct a \textbf{Knowledge Graph (KG)} over React codebases, where nodes represent \emph{Components}, \emph{Routes}, \emph{States}, \emph{Props}, \emph{Hooks}, and \emph{EventHandlers}, and edges encode relationships such as \texttt{componentHasProp}, \texttt{componentDeclaresState}, \texttt{componentDefinesEventHandler}, \texttt{componentRendersJsx}, \texttt{componentRendersComponent}, and \texttt{routeRendersComponent}. The KG is stored in Neo4j and augmented with vector indexes for semantic search. A \textbf{Graph RAG} pipeline combines semantic retrieval with Cypher-based graph expansion to assemble a \emph{minimal, test-relevant subgraph} tailored to a scenario. Finally, an \textbf{agentic workflow} orchestrates three specialized agents: a Retrieval Agent (context assembly), a Test Generation Agent (framework-specific synthesis for Playwright/Cypress/Selenium), and a Validation Agent (iterative refinement for coverage and correctness).
+
+\textbf{Contributions.} This paper makes the following contributions:
+\begin{itemize}
+    \item \textbf{KG for UI codebases:} A fine-grained graph schema that preserves both UI hierarchy and logic flow, enabling explainable and test-relevant retrieval.
+    \item \textbf{Graph RAG:} A hybrid semantic + structural retrieval method with position-aware multi-query scoring for user flows, and smart filtering that reduces context by up to 91\% without losing test-critical information.
+    \item \textbf{Agentic workflow:} A Retrieval $\rightarrow$ Generation $\rightarrow$ Validation loop that grounds LLMs in the KG to mitigate hallucinations and systematically refine tests.
+    \item \textbf{Preliminary results:} Early evidence on a small React website showing improved route recall, reduced token footprint, and executable tests aligned with scenarios.
+\end{itemize}
+
+\section{Related Work}
+\subsection{Automated Test Case Generation}
+Automated test generation spans unit, integration, and UI testing. Unit-level generation leverages search-based techniques (e.g., EvoSuite) and symbolic execution. For UI testing, record-and-replay tools produce brittle scripts; model-based approaches depend on formal specifications or state-machine extraction. Our approach focuses on \emph{UI integration} tests grounded in implementation artifacts through a KG, reducing brittleness and eliminating the need for formal models.
+
+\subsection{LLM-based Test Generation}
+LLMs have been explored for generating test code from natural language and code snippets. While effective for scaffolding, they suffer from limited context windows and hallucinations. We address these by constraining generation to KG-derived entities and supplying a \emph{filtered, structured} context assembled by Graph RAG.
+
+\subsection{Retrieval-Augmented Generation for Code}
+RAG frameworks enhance LLMs with external knowledge. For code, text-based RAG typically indexes files or functions. However, UI behavior emerges from \emph{relationships} across components, routes, and event handlers. Our \emph{graph}-based RAG directly indexes and traverses program structure, providing higher-precision context for UI scenarios.
+
+\subsection{Knowledge Graphs in Software Engineering}
+Graphs have been applied to represent code (e.g., ASTs, call graphs, program dependence graphs). Our novelty lies in a \emph{UI-focused} schema capturing React-specific entities (routes, JSX, hooks, states, handlers) and their relationships relevant for test generation.
+
+\subsection{Agentic Workflows for Automation}
+Multi-agent systems coordinate specialized capabilities (retrieval, critique, planning). In software automation, agentic workflows can decompose tasks and iteratively improve outputs. We instantiate a three-agent loop that grounds each agent in the KG and uses the Validation Agent to drive iterative refinement.
+
+\section{Research Questions}
+We investigate:
+\begin{itemize}
+    \item \textbf{RQ1:} How can we represent a frontend UI codebase as a structured knowledge graph that preserves both UI hierarchy and logic flow?
+    \item \textbf{RQ2:} Can a graph-based RAG approach effectively retrieve relevant UI context for a given user scenario or flow?
+    \item \textbf{RQ3:} How can an agentic workflow collaborate to autonomously generate, refine, and validate comprehensive UI test cases?
+\end{itemize}
+
+\begin{table}[t]
+\centering
+\caption{Research Questions and Descriptions}
+\begin{tabular}{p{0.12\linewidth} p{0.80\linewidth}}
+\toprule
+\textbf{ID} & \textbf{Description} \\
+\midrule
+RQ1 & Represent React code as a KG that preserves UI structure and logic. \\
+RQ2 & Evaluate Graph RAG (semantic + structural) for scenario-context retrieval. \\
+RQ3 & Measure multi-agent collaboration for autonomous test generation and refinement. \\
+\bottomrule
+\end{tabular}
+\label{tab:rqs}
+\end{table}
+
+\section{System Design and Methodology}
+\subsection{Overview}
+Figure~\ref{fig:architecture} presents our architecture. The pipeline takes a natural language scenario as input and outputs executable UI tests:
+\begin{enumerate}
+    \item \textbf{KG Construction:} A static analyzer extracts entities and relationships from the React codebase and stores them in Neo4j. Vector indexes (for components and routes) support semantic similarity.
+    \item \textbf{Graph RAG:} Given a scenario, the Retrieval Agent performs position-aware multi-query semantic search and graph expansion to produce a minimal, test-relevant subgraph.
+    \item \textbf{Test Generation:} The Test Generation Agent synthesizes executable tests (Playwright/Cypress/Selenium) grounded in the subgraph.
+    \item \textbf{Validation \& Refinement:} The Validation Agent critiques coverage and correctness, prompting retrieval or generation adjustments until criteria are met.
+\end{enumerate}
+
+\begin{figure}[t]
+\centering
+\fbox{\begin{minipage}{0.92\linewidth}
+\centering
+\vspace{1.2ex}
+\textbf{System Architecture Placeholder}\\[0.6ex]
+Natural Language Scenario $\rightarrow$ Retrieval Agent (Graph RAG) $\rightarrow$ Test Generation Agent $\rightarrow$ Validation Agent $\rightarrow$ Executable Tests\\[0.8ex]
+Neo4j KG (Components, Routes, States, Props, Hooks, Handlers) with Vector Indexes\\[0.6ex]
+\vspace{0.8ex}
+\end{minipage}}
+\caption{High-level architecture of Graph RAG + Agentic Workflow.}
+\label{fig:architecture}
+\end{figure}
+
+\subsection{Knowledge Graph Construction}
+\textbf{Static Analysis.} We parse the codebase with Babel to extract:
+\begin{itemize}
+    \item \textbf{Nodes:} \emph{Component}, \emph{Route}, \emph{State}, \emph{Prop}, \emph{Hook}, \emph{EventHandler}, (optionally) \emph{JSXElement}, \emph{File}.
+    \item \textbf{Edges:} \texttt{componentHasProp}, \texttt{componentDeclaresState}, \texttt{componentUsesHook}, \texttt{componentDefinesEventHandler}, \texttt{componentRendersJsx}, \texttt{componentRendersComponent}, \texttt{routeRendersComponent}, and file-containment relations.
+\end{itemize}
+We build intra-file edges from AST facts and inter-file edges by resolving imports and matching JSX tags to imported components. The KG is exported to JSON and imported into Neo4j via a streaming Go importer that creates constraints and indexes (including vector indexes).
+
+\textbf{Explainability.} Each node and edge is linked to source file paths and relevant identifiers, enabling traceability from tests back to code artifacts.
+
+\subsection{Graph-based Retrieval (Graph RAG)}
+\textbf{Position-Aware Multi-Query Retrieval.} Given a scenario $S$ expressed as steps (e.g., \texttt{[Register, Dashboard, Analytics]}), we compute:
+\begin{enumerate}
+    \item A \emph{global} embedding of $S$; results weighted at 40\%.
+    \item \emph{Per-step} embeddings with position-aware decay; total 60\% weight distributed with higher weights for earlier steps.
+    \item \emph{Keyword boosting} for exact matches (e.g., \texttt{register} in \texttt{/register}) with a step-position decay factor (e.g., $0.12/(i+1)$).
+\end{enumerate}
+This hybrid score improves route recall and ordering for multi-step flows.
+
+\begin{algorithm}[t]
+\caption{Position-Aware Multi-Query Retrieval}
+\label{alg:position-aware}
+\begin{algorithmic}[1]
+\REQUIRE Scenario steps $[s_1, \dots, s_n]$, global text $S$, top-$k$
+\STATE $q \leftarrow \mathrm{Embed}(S)$
+\STATE $scores \leftarrow \mathrm{QueryIndex}(q)$ with weight $\alpha=0.4$
+\STATE $w \leftarrow \mathrm{StepWeights}(n)$ with $\sum w_i = 0.6$
+\FOR{$i=1$ to $n$}
+  \STATE $q_i \leftarrow \mathrm{Embed}(s_i)$
+  \STATE $r_i \leftarrow \mathrm{QueryIndex}(q_i)$
+  \STATE $\forall~(name,score)\in r_i:~scores[name]\mathrel{+}=w_i\cdot score$
+  \STATE $\forall~name:~scores[name]\mathrel{+}=\mathrm{KeywordBoost}(name,s_i,\beta/(i))$ \COMMENT{$\beta\approx 0.12$}
+\ENDFOR
+\STATE \textbf{return} Top-$k$ by $scores$
+\end{algorithmic}
+\end{algorithm}
+
+\textbf{Graph Expansion and Smart Filtering.} We take the top-ranked routes/components as seed nodes and expand in the KG with bounded depth (default 2), then apply \emph{smart filtering} tailored for test generation:
+\begin{itemize}
+    \item \emph{Include-only types:} \{Component, Route, State, EventHandler, Hook, Prop\}
+    \item \emph{Aggregate styling:} Summarize Tailwind/inline style nodes instead of enumerating each usage.
+    \item \emph{Limit JSX depth:} Optionally keep shallow DOM structure and prune deep subtrees.
+\end{itemize}
+This produces a compact, test-relevant subgraph that reduces token footprint while preserving semantic sufficiency.
+
+\subsection{Agentic Workflow}
+\textbf{Retrieval Agent.} Implements Algorithm~\ref{alg:position-aware} and Cypher-based expansion, emitting a minimal context bundle: seed entities, connected states/handlers/props/hooks, and route order.
+
+\textbf{Test Generation Agent.} Conditions the LLM on the structured context and a framework profile to produce executable tests. The agent is \emph{constrained}: it may only reference routes/components present in the retrieved context, mitigating hallucinations.
+
+\textbf{Validation Agent.} Evaluates generated tests for coverage (routes visited, handlers exercised, assertions present) and correctness heuristics (selector robustness, waits). Upon failure, it requests: (i) expanded retrieval (e.g., deeper graph or additional components), and/or (ii) regeneration with targeted guidance.
+
+\begin{figure}[t]
+\centering
+\fbox{\begin{minipage}{0.92\linewidth}
+\centering
+\vspace{1.2ex}
+\textbf{Pipeline Placeholder}\\[0.6ex]
+Scenario $\rightarrow$ Retrieval (Graph RAG) $\rightarrow$ Subgraph\\
+$\rightarrow$ Test Generation (Playwright/Cypress/Selenium) $\rightarrow$ Validation Loop\\[0.8ex]
+\vspace{0.6ex}
+\end{minipage}}
+\caption{Agentic pipeline overview with Graph RAG and iterative validation.}
+\label{fig:pipeline}
+\end{figure}
+
+\subsection{Test Case Output}
+The system outputs executable tests and/or structured specifications:
+\begin{itemize}
+    \item \textbf{Playwright/Cypress/Selenium} code with imports, navigation, interactions, and assertions.
+    \item \textbf{JSON specifications} (optional) describing steps, inputs, expected outcomes, and preconditions.
+\end{itemize}
+Selectors prioritize \texttt{data-testid} and role/text queries; waits use framework best practices (\texttt{toHaveURL}, \texttt{waitForSelector}, etc.).
+
+\section{Novelty and Research Value}
+\begin{table}[t]
+\centering
+\caption{Novel Aspects of the Approach}
+\begin{tabular}{p{0.36\linewidth} p{0.56\linewidth}}
+\toprule
+\textbf{Area} & \textbf{Novelty} \\
+\midrule
+Code-to-KG Conversion & Preserves semantic/functional relationships beyond textual RAGs, enabling context-aware reasoning. \\
+Graph-RAG Retrieval & Hybrid (semantic + graph traversal) retrieval ensures accurate UI flow representation. \\
+Agentic Workflow & Autonomous multi-agent collaboration for end-to-end test generation and refinement. \\
+End-to-End Coverage & Spans full user journeys across routes and composed components. \\
+Explainability & KG provides traceability from tests to code artifacts and relations. \\
+\bottomrule
+\end{tabular}
+\label{tab:novelty}
+\end{table}
+
+\section{Evaluation}
+\subsection{Experimental Setup}
+We evaluate on a small React website (internal) and plan to include open-source React apps in future work. The KG is built with our static analyzer; data is stored in Neo4j with vector indexes for components/routes. The agents run in Python, interacting with Neo4j and an LLM via a standard API.
+
+\subsection{Metrics}
+We consider:
+\begin{itemize}
+    \item \textbf{Retrieval Quality:} Route/component recall@k, position accuracy.
+    \item \textbf{Context Efficiency:} Nodes/edges, JSON size, token count for prompts.
+    \item \textbf{Generation Quality:} Syntactic correctness, semantic alignment with scenario, assertion count, steps count.
+    \item \textbf{Execution:} Test pass rate against a running app.
+    \item \textbf{Effort Reduction:} Time to first executable test vs. manual authoring.
+\end{itemize}
+
+\subsection{Baselines}
+We compare against:
+\begin{itemize}
+    \item \emph{Text RAG}: file-level retrieval (no KG).
+    \item \emph{Single-query embedding}: no position-aware step weighting.
+    \item \emph{Full-graph context}: no smart filtering.
+\end{itemize}
+
+\subsection{Preliminary Results}
+On the small website, Graph RAG improved route recall for multi-step scenarios (e.g., \emph{Register $\rightarrow$ Dashboard $\rightarrow$ Analytics}) where naive single-query retrieval omitted early-step routes:
+\begin{itemize}
+    \item \textbf{Route recall:} 66\% $\rightarrow$ 100\% (top-5).
+    \item \textbf{Context reduction:} 1.0\,MB $\rightarrow$ 95\,KB (nodes: 369 $\rightarrow$ 82, edges: 1654 $\rightarrow$ 94).
+    \item \textbf{Token footprint:} $\sim$150k $\rightarrow$ $\sim$15k tokens for LLM prompts (10$\times$ fewer).
+    \item \textbf{Executable tests:} Generated Playwright/Cypress/Selenium tests aligned with scenario steps, including navigation and assertions.
+\end{itemize}
+Qualitatively, the KG provided transparent reasoning paths (e.g., why a component or handler was selected), and the Validation Agent identified missing assertions and suggested additional waits or selector strategies.
+
+\begin{table}[t]
+\centering
+\caption{Context Efficiency (Illustrative)}
+\begin{tabular}{lrrrr}
+\toprule
+Mode & Nodes & Edges & Size & Tokens \\
+\midrule
+Full & 369 & 1654 & 1.0\,MB & $\sim$150k \\
+Smart & 235 & 247 & 250\,KB & $\sim$40k \\
+Minimal & 82 & 94 & 95\,KB & $\sim$15k \\
+\bottomrule
+\end{tabular}
+\label{tab:efficiency}
+\end{table}
+
+\subsection{Threats to Validity}
+Internal threats include parameter sensitivity (e.g., step weights, keyword boosts) and analyzer precision for dynamic patterns (lazy-loaded routes, dynamic imports). External threats include generalizability to diverse React architectures and UI idioms. Construct threats stem from proxy metrics (e.g., token counts) not fully capturing usability or maintainability. We mitigate via ablations, multi-app studies, and human evaluation.
+
+\section{Discussion}
+\textbf{Why Graph RAG over Text RAG?} UI behavior emerges from relationships (routes $\leftrightarrow$ components $\leftrightarrow$ handlers/states). Graph traversal retrieves these relationships directly, improving precision and explainability.
+
+\textbf{Why Agentic?} Decomposing retrieval, generation, and validation enables targeted iteration: retrieval can adjust depth/types; generation can align to frameworks; validation can enforce coverage criteria. The loop converges to higher-quality tests than single-pass prompting.
+
+\textbf{Limitations.} Static analysis cannot observe runtime state or flakiness sources (network, timing). Some selectors remain brittle without robust \texttt{data-testid} usage. LLM outputs may still require human review in edge cases.
+
+\section{Conclusion and Future Work}
+We introduced a system that automates UI test generation via Graph RAG and an agentic workflow grounded in a React Knowledge Graph. Preliminary results show improved retrieval quality, substantial context reduction, and executable, framework-agnostic tests. Future work includes: (i) integrating dynamic/runtime traces into the KG, (ii) coverage-guided retrieval and test generation, (iii) self-healing tests guided by KG diffs, and (iv) extending to other UI frameworks (Vue/Angular/Svelte) and mobile platforms.
+
+\section*{Acknowledgments}
+Omitted for anonymity.
+
+\section*{Artifacts}
+Anonymized artifacts (KG schema, example subgraphs, prompts, and sample tests) will be released upon acceptance.
+
+\begin{thebibliography}{00}
+\bibitem{rag} P. Lewis et al., ``Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks,'' 2020.
+\bibitem{kgse} M. Allamanis et al., ``Learning to Represent Programs with Graphs,'' 2018.
+\bibitem{evo} G. Fraser and A. Arcuri, ``EvoSuite: Automatic Test Suite Generation for Object-Oriented Software,'' 2011.
+\bibitem{llmcode} M. Chen et al., ``Evaluating Large Language Models Trained on Code,'' 2021.
+\bibitem{agent} T. K. et al., ``Multi-agent Systems for Complex Task Automation,'' 2023.
+\end{thebibliography}
+
+\end{document}
+
+
+

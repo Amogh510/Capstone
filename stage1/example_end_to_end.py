@@ -222,6 +222,9 @@ def run_complete_pipeline(
             print(f"\n{spec['id']}: {spec['title']}")
             print(f"  Steps: {len(spec['steps'])}")
             print(f"  Expected: {spec['expected_result'][:80]}...")
+            if 'rationale' in spec:
+                rationale_preview = spec['rationale'][:120] + "..." if len(spec['rationale']) > 120 else spec['rationale']
+                print(f"  💡 Rationale: {rationale_preview}")
         if len(test_specs) > 3:
             print(f"\n... ({len(test_specs) - 3} more test cases)")
     

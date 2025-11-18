@@ -43,7 +43,7 @@ class TestSpecConfig:
     """Configuration for test specification generation."""
     llm_model: str = os.getenv("STAGE3_LLM_MODEL", "groq/llama-3.3-70b-versatile")
     temperature: float = float(os.getenv("STAGE3_TEMPERATURE", "0.2"))
-    max_tokens: int = int(os.getenv("STAGE3_MAX_TOKENS", "3000"))
+    max_tokens: int = int(os.getenv("STAGE3_MAX_TOKENS", "6000"))
     num_test_cases: int = int(os.getenv("STAGE3_NUM_TEST_CASES", "5"))
 
 
@@ -187,7 +187,8 @@ Generate test cases in JSON array format with this exact structure:
       "Step 2: Another action",
       "Step 3: Verify something"
     ],
-    "expected_result": "Clear description of expected outcome"
+    "expected_result": "Clear description of expected outcome",
+    "rationale": "Explanation of why this test was generated based on KG context (components, states, handlers, routes used)"
   }
 ]
 
@@ -198,6 +199,12 @@ Generate test cases in JSON array format with this exact structure:
 3. **Completeness**: Each test should be self-contained and executable
 4. **Clarity**: Steps should be clear enough for manual or automated testing
 5. **Realistic**: Use realistic test data (emails, names, etc.)
+6. **Explainability**: The rationale field MUST explain:
+   - Which components from the KG are being tested
+   - Which routes are involved
+   - Which states/handlers are being verified
+   - Why this test case is important for the scenario
+   - What KG context informed this test design
 
 ## Test Case Types to Consider
 
@@ -339,7 +346,9 @@ Output ONLY a valid JSON array matching the specified format.
             "id": "TC01",
             "title": f"Verify {goal} - happy path",
             "steps": steps,
-            "expected_result": "User successfully completes the workflow without errors"
+            "expected_result": "User successfully completes the workflow without errors",
+            "rationale": f"Tests the primary happy path flow through routes: {', '.join(routes)}. " + 
+                        (f"Includes authentication flow as auth is required." if auth_required else "No authentication required.")
         })
         
         # TC02: Authentication failure (if auth required)
@@ -353,7 +362,8 @@ Output ONLY a valid JSON array matching the specified format.
                     "Click 'Login' button",
                     "Verify error message is displayed"
                 ],
-                "expected_result": "Error message shown and user remains on login page"
+                "expected_result": "Error message shown and user remains on login page",
+                "rationale": "Tests error handling in authentication flow. Important because the scenario requires authentication to access protected routes."
             })
         
         return specs

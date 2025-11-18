@@ -1,0 +1,114 @@
+[
+    {
+      "id": "TC01",
+      "title": "Successful Login Happy Path",
+      "steps": [
+        "Step 1: Navigate to /login route",
+        "Step 2: Enter valid email and password",
+        "Step 3: Click on the submit button to trigger handleSubmit handler"
+      ],
+      "expected_result": "User is logged in successfully and redirected to the next page",
+      "rationale": "This test covers the primary happy path for the login workflow, verifying that the Login component's handleSubmit handler works correctly with valid credentials, and that the /login route handles the authentication process as expected."
+    },
+    {
+      "id": "TC02",
+      "title": "Failed Login Due to Invalid Credentials",
+      "steps": [
+        "Step 1: Navigate to /login route",
+        "Step 2: Enter invalid email or password",
+        "Step 3: Click on the submit button to trigger handleSubmit handler"
+      ],
+      "expected_result": "An error message is displayed indicating that the credentials are invalid",
+      "rationale": "This test checks the authentication flow for login failure, ensuring that the Login component's error state is updated correctly when the handleSubmit handler encounters invalid credentials, and that the error is displayed to the user."
+    },
+    {
+      "id": "TC03",
+      "title": "API Failure During Login",
+      "steps": [
+        "Step 1: Navigate to /login route",
+        "Step 2: Enter valid email and password",
+        "Step 3: Simulate an API failure during the login request",
+        "Step 4: Click on the submit button to trigger handleSubmit handler"
+      ],
+      "expected_result": "An error message is displayed indicating that the login failed due to an API error",
+      "rationale": "This test covers an error scenario where the API fails during the login process, verifying that the Login component handles API failures correctly and updates its error state accordingly, and that the /login route handles the error as expected."
+    },
+    {
+      "id": "TC04",
+      "title": "Validation Error for Empty Email",
+      "steps": [
+        "Step 1: Navigate to /login route",
+        "Step 2: Leave the email field empty and enter a valid password",
+        "Step 3: Click on the submit button to trigger handleSubmit handler"
+      ],
+      "expected_result": "A validation error message is displayed indicating that the email is required",
+      "rationale": "This test checks for validation errors when the email field is empty, ensuring that the Login component's validation works correctly and that the error is displayed to the user, covering an edge case for empty states."
+    },
+    {
+      "id": "TC05",
+      "title": "Validation Error for Empty Password",
+      "steps": [
+        "Step 1: Navigate to /login route",
+        "Step 2: Enter a valid email and leave the password field empty",
+        "Step 3: Click on the submit button to trigger handleSubmit handler"
+      ],
+      "expected_result": "A validation error message is displayed indicating that the password is required",
+      "rationale": "This test covers another validation error scenario where the password field is empty, verifying that the Login component correctly handles this edge case and displays the appropriate error message."
+    },
+    {
+      "id": "TC06",
+      "title": "Keyboard Navigation to Login Button",
+      "steps": [
+        "Step 1: Navigate to /login route",
+        "Step 2: Use the keyboard to navigate to the login button",
+        "Step 3: Press Enter to trigger the handleSubmit handler"
+      ],
+      "expected_result": "The login form is submitted successfully using keyboard navigation",
+      "rationale": "This test checks the accessibility of the login form by verifying that the login button can be accessed and triggered using keyboard navigation, ensuring that users who rely on keyboards can complete the login process."
+    },
+    {
+      "id": "TC07",
+      "title": "ARIA Attributes for Login Form",
+      "steps": [
+        "Step 1: Navigate to /login route",
+        "Step 2: Inspect the login form elements for ARIA attributes",
+        "Step 3: Verify that ARIA attributes are correctly set for accessibility"
+      ],
+      "expected_result": "All form elements have the correct ARIA attributes for screen readers and accessibility tools",
+      "rationale": "This test ensures that the login form is accessible by checking for the presence and correctness of ARIA attributes, which are crucial for users relying on screen readers or other accessibility tools to navigate the form."
+    },
+    {
+      "id": "TC08",
+      "title": "Focus Management for Login Fields",
+      "steps": [
+        "Step 1: Navigate to /login route",
+        "Step 2: Click on the email field to focus it",
+        "Step 3: Use the keyboard to navigate to the password field",
+        "Step 4: Verify that focus is correctly transferred between fields"
+      ],
+      "expected_result": "Focus is correctly managed between form fields, allowing for easy navigation",
+      "rationale": "This test covers the accessibility aspect of focus management, ensuring that the login form allows users to easily navigate between fields using their keyboards, which is essential for a smooth user experience."
+    },
+    {
+      "id": "TC09",
+      "title": "Login with Special Characters in Email",
+      "steps": [
+        "Step 1: Navigate to /login route",
+        "Step 2: Enter an email containing special characters and a valid password",
+        "Step 3: Click on the submit button to trigger handleSubmit handler"
+      ],
+      "expected_result": "The login is successful, and the email with special characters is accepted",
+      "rationale": "This test checks an edge case where the email contains special characters, verifying that the Login component and the /login route can handle such emails correctly without causing any errors or validation issues."
+    },
+    {
+      "id": "TC10",
+      "title": "Login with Long Email Address",
+      "steps": [
+        "Step 1: Navigate to /login route",
+        "Step 2: Enter a very long email address and a valid password",
+        "Step 3: Click on the submit button to trigger handleSubmit handler"
+      ],
+      "expected_result": "The login is successful, and the long email address is accepted without any issues",
+      "rationale": "This test covers another edge case with a very long email address, ensuring that the Login component and the authentication process can handle long strings correctly, verifying that the /login route and the handleSubmit handler do not truncate or reject long emails."
+    }
+  ]
